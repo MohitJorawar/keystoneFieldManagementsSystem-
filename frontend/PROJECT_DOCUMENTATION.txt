@@ -1,0 +1,469 @@
+====================================================================================================
+                       PROJECT KEYSTONE - FIELD SERVICE MANAGEMENT PLATFORM
+                                 COMPLETE SYSTEM DOCUMENTATION
+====================================================================================================
+
+DOCUMENT INFORMATION:
+---------------------
+Title: Project KEYSTONE Comprehensive Technical Documentation & Architecture Manual
+System Type: Enterprise Field Service Management (FSM) Platform
+Architecture: Full-Stack Decoupled Architecture (React SPA + Spring Boot REST API + PostgreSQL)
+Target Audience: Technical Evaluators, Enterprise Leadership, Systems Architects
+Date: August 2026
+
+
+====================================================================================================
+1. PROJECT OVERVIEW & EXECUTIVE SUMMARY
+====================================================================================================
+
+1.1 Executive Summary
+---------------------
+Project KEYSTONE is an enterprise-grade, end-to-end Field Service Management (FSM) platform engineered 
+to bridge the operational gap between field technicians, dispatchers, customers, and executive management. 
+The platform streamlines the entire lifecycle of field service requests—from initial public enquiry and 
+quote estimation to work order creation, real-time technician dispatching, labor and spare parts tracking, 
+SLA compliance enforcement, and automated reporting.
+
+Built with performance, security, and responsive user experience at its core, KEYSTONE features a 
+high-conversion modern landing page powered by GSAP animations alongside a multi-role web application 
+providing tailored user interfaces based on granular Role-Based Access Control (RBAC).
+
+
+1.2 Core Business Objectives & Value Proposition
+------------------------------------------------
+- Operational Efficiency: Eliminates manual paper-based dispatching and spreadsheet tracking by digitizing 
+  the complete service lifecycle.
+- SLA Compliance & Accountability: Automatically tracks Service Level Agreement (SLA) deadlines per ticket, 
+  flagging overdue work orders and calculating real-time SLA compliance rates.
+- Resource & Inventory Control: Provides real-time visibility into field inventory, tracking spare part consumption 
+  per work order and maintaining precise stock counts.
+- Dynamic Role-Based Experience: Delivers role-tailored dashboards for Managers, Dispatchers, Field Technicians, 
+  and Customers, ensuring every persona has access to exact workflows without clutter.
+- Customer Empowerment: Offers a self-service customer portal for service requests, order tracking, and 
+  location updating, driving customer satisfaction and reducing call-center friction.
+
+
+1.3 User Personas & Role-Based Access Control (RBAC)
+---------------------------------------------------
+KEYSTONE enforces 4 distinct system roles, each mapped to specific security scopes:
+
+1. MANAGER (Executive Administrator):
+   - Full administrative control across the platform.
+   - Access to executive analytics (SLA compliance, technician performance, site breakdown).
+   - Customer and site management (create, update, delete customers/sites).
+   - Work order deletion and full lifecycle override capability.
+   - Inventory tracking and incoming customer quote enquiry management.
+
+2. DISPATCHER (Operations Specialist):
+   - Operations-focused role responsible for job scheduling and technician dispatch.
+   - Access to visual Kanban Dispatch Board for status transitions and job drag-and-drop workflow.
+   - Work order creation, editing, technician assignment, and customer management.
+   - Review and management of incoming public service enquiries.
+
+3. TECHNICIAN (Field Operative):
+   - Mobile-optimized workstation focused strictly on assigned work orders ("My Active Jobs").
+   - One-click job status transitions (Start Job -> In Progress -> Pause -> Complete Job).
+   - Labor time clocking (logging minutes worked with technician notes).
+   - Inventory consumption logging (selecting spare parts used and recording quantities).
+
+4. CUSTOMER (Client / Site Owner):
+   - Portal tailored for end-customers to request field service jobs.
+   - View history of submitted work orders, current status, assigned technician, and SLA target dates.
+   - Site profile view with capability to update live address/GPS coordinates for service teams.
+
+
+====================================================================================================
+2. TECHNOLOGY STACK SPECIFICATIONS
+====================================================================================================
+
+2.1 Frontend Architecture (Client Application)
+----------------------------------------------
+- Core Framework: React 19 (TypeScript 6)
+- Build System & Dev Server: Vite 8.1
+- Single Page Application (SPA) Router: React Router DOM v7.18
+- UI Styling: Custom Vanilla CSS with CSS Custom Properties (Design System tokens, glassmorphism, 
+  dark mode aesthetics, responsive flex/grid)
+- Micro-Animations & Interactivity:
+  * GSAP (GreenSock Animation Platform) 3.15 with ScrollTrigger & CustomEase
+  * Custom text typing engine (TextType.tsx) and character splitting animations (SplitText.tsx)
+- Iconography: Lucide React (lucide-react 1.24)
+- State Management: React Context API (AuthContext) with persistent browser LocalStorage fallback
+- Code Quality & Linting: Oxlint (oxlint 1.71)
+
+2.2 Backend Architecture (Server Application)
+----------------------------------------------
+- Runtime & Language: Java 20 (Java OpenJDK)
+- Framework: Spring Boot 3.2.5 (Starter Web, Data JPA, Security, Validation)
+- Authentication & Authorization:
+  * Spring Security 6 with Stateless JWT Token Filter
+  * Java JWT (jjwt 0.11.5) with 256-bit HS256 encryption
+  * BCrypt password hashing encoder ($2a$10$)
+- Database ORM / Persistence: Spring Data JPA + Hibernate ORM
+- Database Migration Engine: Flyway DB (10.11.0) with automated SQL versioned scripts (V1__init_schema.sql to V6)
+- API Specification & Documentation: OpenAPI 3.0 / Swagger UI (springdoc-openapi-starter-webmvc-ui 2.5.0)
+- Productivity Utilities: Lombok (Lombok annotations for DTOs, Builders, Entities)
+
+2.3 Database Layer
+------------------
+- Database Engine: PostgreSQL 15+
+- Driver: PostgreSQL JDBC Driver (org.postgresql:postgresql)
+- Object-Relational Model:
+  * UUID primary keys across all relational entities for secure global uniqueness.
+  * Referential integrity enforced with cascading & set-null constraints.
+  * Check constraints on inventory stock, logged minutes, and part quantities.
+
+2.4 Infrastructure & Cloud Deployment
+-------------------------------------
+- Frontend Hosting: Vercel SPA Hosting with automated API rewrites (`/api/*` -> Render backend)
+- Backend Hosting: Render Web Service (Docker container deployment via backend/Dockerfile)
+- Production Database: Render Managed PostgreSQL (`keystone-db`)
+
+
+====================================================================================================
+3. SYSTEM ARCHITECTURE & DATA MODELS
+====================================================================================================
+
+3.1 System Architecture Diagram (Text Representation)
+-----------------------------------------------------
+
++-----------------------------------------------------------------------------------+
+|                                 CLIENT BROWSER                                    |
+|   +---------------------------------------+   +-------------------------------+   |
+|   |         Public Landing Page           |   |       Role-Based Dashboard    |   |
+|   |   (GSAP Animations, Quote Form)       |   | (Manager/Tech/Customer Views) |   |
+|   +---------------------------------------+   +-------------------------------+   |
++-----------------------------------------|-----------------------------------------+
+                                          | HTTP / REST (JSON)
+                                          v
++-----------------------------------------------------------------------------------+
+|                             VERCEL EDGE INFRASTRUCTURE                            |
+|             (Static Asset Serving + API Rewrite Middleware /api/*)                |
++-----------------------------------------|-----------------------------------------+
+                                          | HTTPS Proxy
+                                          v
++-----------------------------------------------------------------------------------+
+|                        RENDER CONTAINER PLATFORM (DOCKER)                         |
+|   +---------------------------------------------------------------------------+   |
+|   |                         SPRING BOOT REST APPLICATION                      |   |
+|   |                                                                           |   |
+|   |  +---------------------+  +---------------------+  +-------------------+  |   |
+|   |  | Security Filter     |  |   REST Controllers  |  |  Spring Security  |  |   |
+|   |  | (JWT Auth Filter)   |  | (Auth, WorkOrder,   |  |  (RBAC Guards:    |  |   |
+|   |  |                     |  |  Customer, Reports) |  |  PreAuthorize)    |  |   |
+|   |  +----------|----------+  +----------|----------+  +---------|---------+  |   |
+|   |             |                        |                       |            |   |
+|   |             +------------------------v-----------------------+            |   |
+|   |                                Service Layer                              |   |
+|   |                       (Business Logic & Validation)                       |   |
+|   |                                      |                                    |   |
+|   |                                      v                                    |   |
+|   |                             Spring Data JPA Repos                         |   |
+|   +--------------------------------------|------------------------------------+   |
++------------------------------------------|----------------------------------------+
+                                           | JDBC Dialect: PostgreSQL
+                                           v
++-----------------------------------------------------------------------------------+
+|                           MANAGED POSTGRESQL DATABASE                             |
+|    (Tables: customers, sites, users, work_orders, work_order_status_history,      |
+|             parts, part_usages, time_logs, enquiries, flyway_schema_history)    |
++-----------------------------------------------------------------------------------+
+
+
+3.2 Entity-Relationship (ER) Diagram (Text Representation)
+-----------------------------------------------------------
+
+  +-----------------------+              1:N             +-----------------------+
+  |       CUSTOMERS       |<----------------------------->|         SITES         |
+  +-----------------------+                              +-----------------------+
+  | id (UUID, PK)         |                              | id (UUID, PK)         |
+  | name (VARCHAR)        |                              | customer_id (FK)      |
+  | contact_email (VARCHAR|                              | name (VARCHAR)        |
+  | phone (VARCHAR)       |                              | address (TEXT)        |
+  | current_address (TEXT)|                              +-----------|-----------+
+  | latitude (DECIMAL)    |                                          | 1:N
+  | longitude (DECIMAL)   |                                          v
+  +-----------|-----------+                              +-----------------------+
+              | 1:N                                      |      WORK_ORDERS      |
+              v                                          +-----------------------+
+  +-----------------------+                              | id (UUID, PK)         |
+  |         USERS         |                              | code (VARCHAR, Unique)|
+  +-----------------------+                              | title (VARCHAR)       |
+  | id (UUID, PK)         |--+                           | description (TEXT)    |
+  | name (VARCHAR)        |  |                           | priority (ENUM)       |
+  | email (VARCHAR, Unique|  | Assigned                  | status (ENUM)         |
+  | password_hash (VARCHAR|  | Tech                      | sla_due_at (TIMESTAMP)|
+  | role (ENUM)           |  | 1:N                       | customer_id (FK)      |
+  | customer_id (FK, Opt) |  +-------------------------->| site_id (FK)          |
+  +-----------------------+                              | assigned_to (FK, Opt) |
+                                                         | created_at (TIMESTAMP)|
+                                                         +-----------|-----------+
+                                                                     |
+                     +-----------------------------------------------+-----------------------------------------------+
+                     | 1:N                                           | 1:N                                           | 1:N
+                     v                                               v                                               v
+  +---------------------------------------+       +---------------------------------------+       +---------------------------------------+
+  |      WORK_ORDER_STATUS_HISTORY        |       |               TIME_LOGS               |       |              PART_USAGES              |
+  +---------------------------------------+       +---------------------------------------+       +---------------------------------------+
+  | id (UUID, PK)                         |       | id (UUID, PK)                         |       | id (UUID, PK)                         |
+  | work_order_id (FK)                    |       | work_order_id (FK)                    |       | work_order_id (FK)                    |
+  | from_status (VARCHAR)                 |       | technician_id (FK)                    |       | part_id (FK -> PARTS)                 |
+  | to_status (VARCHAR)                   |       | minutes (INTEGER)                     |       | qty_used (INTEGER)                    |
+  | changed_by (FK -> USERS)              |       | note (VARCHAR)                        |       | logged_at (TIMESTAMP)                 |
+  | changed_at (TIMESTAMP)                |       | logged_at (TIMESTAMP)                 |       +---------------------------------------+
+  | note (TEXT)                           |       +---------------------------------------+                         |
+  +---------------------------------------+                                                                         v (FK)
+                                                                                                  +---------------------------------------+
+                                                                                                  |                 PARTS                 |
+                                                                                                  +---------------------------------------+
+                                                                                                  | id (UUID, PK)                         |
+                                                                                                  | name (VARCHAR)                        |
+                                                                                                  | sku (VARCHAR, Unique)                 |
+                                                                                                  | unit_cost (DECIMAL)                   |
+                                                                                                  | stock_qty (INTEGER)                   |
+                                                                                                  +---------------------------------------+
+
+
+3.3 Work Order Lifecycle State Machine
+--------------------------------------
+
+      [ Customer / Manager Creation ]
+                    |
+                    v
+                 +-----+
+                 | NEW |
+                 +-----+
+                    |
+                    | Dispatcher Assigns Technician
+                    v
+               +----------+
+               | ASSIGNED |
+               +----------+
+                    |
+                    | Technician Clicks "Start Job"
+                    v
+              +-------------+   Technician Puts On Hold
+              | IN_PROGRESS |----------------------------> +---------+
+              +-------------+<----------------------------| ON_HOLD |
+                    |           Technician Resumes Job     +---------+
+                    |
+                    | Technician Completes Work & Logs Parts/Time
+                    v
+               +-----------+
+               | COMPLETED |
+               +-----------+
+                    |
+                    +-----------------------------+
+                    |                             |
+                    | Manager/Dispatcher Review   | Manager Overrides / Cancels
+                    v                             v
+               +--------+                    +-----------+
+               | CLOSED |                    | CANCELLED |
+               +--------+                    +-----------+
+
+
+====================================================================================================
+4. SCREENSHOTS & VISUAL INTERFACE COMPONENT LAYOUTS
+====================================================================================================
+
+4.1 Screen 1: Public Landing Page & Instant Quote Calculator
+-----------------------------------------------------------
+[ Visual ASCII Representation ]
+
++----------------------------------------------------------------------------------------------------+
+| KEYSTONE LOGO   [ Services ]   [ Features ]   [ Calculator ]   [ Contact ]        ( Sign In Button )|
++----------------------------------------------------------------------------------------------------+
+|                                                                                                    |
+|    ENTERPRISE FIELD SERVICE MANAGEMENT                                                             |
+|    Streamline Operations, Dispatch Technicians & Track SLA Compliance                              |
+|                                                                                                    |
+|    [ Get Instant Quote ]   [ Request Demo ]                                                        |
+|                                                                                                    |
+|    +------------------------------------------------------------------------------------------+    |
+|    | INSTANT SERVICE QUOTE CALCULATOR                                                         |    |
+|    | Service Type: [ HVAC Repair v ]     Urgency: [ Emergency SLA (2-Hour) v ]                 |    |
+|    | Site Scale:   [ Multi-Site / Enterprise v ]                                               |    |
+|    |                                                                                          |    |
+|    | ESTIMATED INVESTMENT: $450.00                                                            |    |
+|    | Includes: 24/7 Priority Dispatch, Guaranteed SLA, OEM Parts Warranty                     |    |
+|    | [ Book Service Now ]                                                                     |    |
+|    +------------------------------------------------------------------------------------------+    |
+|                                                                                                    |
+|    STATISTICS BANNER:                                                                              |
+|    +------------------------+  +------------------------+  +------------------------+              |
+|    |     99.4% SLA RATE     |  |   12,500+ JOBS DONE    |  |   15 MIN DISPATCH RATE |              |
+|    +------------------------+  +------------------------+  +------------------------+              |
++----------------------------------------------------------------------------------------------------+
+
+Key Features:
+- Smooth GSAP scroll transitions and custom text typing headers.
+- Real-time quote computation engine based on dynamic selection.
+- Quick direct enquiry modal submitting lead data straight into the backend API.
+
+
+4.2 Screen 2: Executive Management Dashboard Overview
+---------------------------------------------------
+[ Visual ASCII Representation ]
+
++----------------------------------------------------------------------------------------------------+
+| [=] KEYSTONE FSM | Role: MANAGER (Mohit)                            [ Notifications ]  ( Logout )  |
++----------------------------------------------------------------------------------------------------+
+| [NAV SIDEBAR]    | EXECUTIVE SUMMARY & METRICS                                                     |
+| (x) Dashboard    | +-----------------------------------------------------------------------------+ |
+| ( ) Dispatch     | | TOTAL WORK ORDERS | IN PROGRESS | SLA COMPLIANCE RATE | OVERDUE TICKETS    | |
+| ( ) Work Orders  | |        48         |     12      |       96.8%         |       2 (ALERT)    | |
+| ( ) Customers    | +-----------------------------------------------------------------------------+ |
+| ( ) Inventory    |                                                                                 |
+| ( ) Enquiries    | WORK ORDER STATUS BREAKDOWN              TECHNICIAN PERFORMANCE                 |
+|                  | +-------------------------------------+  +------------------------------------+ |
+|                  | | NEW         : [####      ] 8        |  | Charlie Tech : 14 Jobs (98% SLA)   | |
+|                  | | ASSIGNED    : [######    ] 12       |  | David Tech   : 11 Jobs (95% SLA)   | |
+|                  | | IN_PROGRESS : [########  ] 16       |  +------------------------------------+ |
+|                  | | COMPLETED   : [#####     ] 10       |                                         |
+|                  | +-------------------------------------+                                         |
+|                  |                                                                                 |
+|                  | RECENT PUBLIC SERVICE ENQUIRIES                                                 |
+|                  | +-----------------------------------------------------------------------------+ |
+|                  | | CLIENT NAME   | SERVICE REQUESTED | DATE       | STATUS   | ACTION          | |
+|                  | | John Smith    | Commercial Plumbing| 2026-08-07 | NEW      | [ Mark Read ]   | |
+|                  | +-----------------------------------------------------------------------------+ |
++----------------------------------------------------------------------------------------------------+
+
+
+4.3 Screen 3: Interactive Visual Dispatch Kanban Board
+------------------------------------------------------
+[ Visual ASCII Representation ]
+
++----------------------------------------------------------------------------------------------------+
+| KANBAN DISPATCH BOARD | Filter: [ All Priority v ]  [ Search Jobs... ]        [ + New Work Order ] |
++----------------------------------------------------------------------------------------------------+
+| NEW (3)             ASSIGNED (4)         IN_PROGRESS (5)      ON_HOLD (1)          COMPLETED (8)   |
+| +-----------------+ +------------------+ +------------------+ +------------------+ +-------------+ |
+| | WO-1004         | | WO-1002          | | WO-1001          | | WO-0998          | | WO-0995     | |
+| | HVAC Fault      | | Generator Maint  | | Chiller Repair   | | Waiting Parts    | | Valve Swap  | |
+| | Acme Corp       | | Globex Corp      | | Acme Corp        | | Globex Corp      | | Acme Corp   | |
+| | Priority: HIGH  | | Tech: Charlie    | | Tech: David      | | Tech: Charlie    | | Tech: David | |
+| | SLA: 3h left    | | SLA: 8h left     | | SLA: 1h left     | | SLA: PAUSED      | | Status: OK  | |
+| | [ Assign Tech ] | | [ Reassign ]     | | [ View Details ] | | [ Resume Job ]   | | [ Close WO ]| |
+| +-----------------+ +------------------+ +------------------+ +------------------+ +-------------+ |
++----------------------------------------------------------------------------------------------------+
+
+
+4.4 Screen 4: Technician Mobile-Optimized Field Workstation
+-----------------------------------------------------------
+[ Visual ASCII Representation ]
+
++-------------------------------------------------------------------+
+| KEYSTONE MOBILE | Tech: Charlie                     ( Sign Out )  |
++-------------------------------------------------------------------+
+| MY ASSIGNED JOBS (2 Active)                                       |
+|                                                                   |
+| +---------------------------------------------------------------+ |
+| | WORK ORDER #WO-1001: Chiller Plant Pressure Spike             | |
+| | Customer: Acme Corp | Site: Acme Headquarters                 | |
+| | Address : 123 Industrial Way, Tech City                       | |
+| | Priority: EMERGENCY | SLA Due: Today, 17:00 (In 45 Mins)      | |
+| |                                                               | |
+| | STATUS: IN_PROGRESS                                           | |
+| |                                                               | |
+| | ACTION CONTROLS:                                              | |
+| | [ (||) Pause Job ]     [ (V) Complete Work Order ]             | |
+| |                                                               | |
+| | QUICK LOGGING:                                                | |
+| | [ + Log Time Worked (Minutes) ]                               | |
+| | [ + Log Spare Part Consumed   ]                               | |
+| +---------------------------------------------------------------+ |
++-------------------------------------------------------------------+
+
+
+4.5 Screen 5: Customer Portal & Service Request Hub
+---------------------------------------------------
+[ Visual ASCII Representation ]
+
++----------------------------------------------------------------------------------------------------+
+| KEYSTONE CUSTOMER PORTAL | Welcome, Acme Corp                                      ( Sign Out )    |
++----------------------------------------------------------------------------------------------------+
+| MY SERVICE TICKETS                                                     [ + Submit Service Request ]|
+| +------------------------------------------------------------------------------------------------+ |
+| | TICKET CODE | TITLE                     | SITE LOCATION      | STATUS      | SLA TARGET DATE   | |
+| | WO-1001     | Chiller Plant Pressure    | Acme HQ            | IN_PROGRESS | Today 17:00       | |
+| | WO-1004     | HVAC Air Filter Swap      | Distribution Center| NEW         | Tomorrow 12:00    | |
+| +------------------------------------------------------------------------------------------------+ |
+|                                                                                                    |
+| SITE & LIVE LOCATION TRACKING                                                                      |
+| +------------------------------------------------------------------------------------------------+ |
+| | Site Name: Acme Headquarters                                                                   | |
+| | Current Registered Address: 123 Industrial Way, Tech City                                      | |
+| | Coordinates: Lat 37.7749, Long -122.4194                                                       | |
+| | [ Update Site Address / Location ]                                                             | |
+| +------------------------------------------------------------------------------------------------+ |
++----------------------------------------------------------------------------------------------------+
+
+
+====================================================================================================
+5. REST API SPECIFICATIONS & ENDPOINTS
+====================================================================================================
+
+5.1 Authentication Controller (`/api/auth`)
+- `POST /api/auth/login`: Authenticate user credentials and return JWT bearer token.
+- `POST /api/auth/register`: Public registration endpoint for new customer account creation.
+
+5.2 Work Order Controller (`/api/work-orders`)
+- `GET /api/work-orders`: Paginated list of work orders with multi-column sorting and status filters.
+- `GET /api/work-orders/{id}`: Detailed work order object with time logs, parts used, and status history.
+- `POST /api/work-orders`: Create new work order ticket (Secured: Manager, Dispatcher, Customer).
+- `PUT /api/work-orders/{id}`: Edit work order attributes.
+- `POST /api/work-orders/{id}/assign`: Assign or reassign technician to a job.
+- `POST /api/work-orders/{id}/status`: Execute status transitions (NEW -> ASSIGNED -> IN_PROGRESS, etc.).
+- `POST /api/work-orders/{id}/parts`: Log inventory part consumption for work order.
+- `POST /api/work-orders/{id}/time`: Log labor time minutes and field notes.
+- `GET /api/work-orders/technicians`: Retrieve available technician user list (Secured: Manager, Dispatcher).
+- `DELETE /api/work-orders/{id}`: Permanently remove work order (Secured: Manager).
+
+5.3 Customer & Site Controller (`/api/customers`, `/api/sites`)
+- `GET /api/customers`: Search and list customer profiles.
+- `POST /api/customers`: Create customer organization profile.
+- `GET /api/customers/{id}/sites`: List sites registered to customer.
+- `POST /api/customers/{id}/sites`: Add new physical site/facility to customer.
+- `GET /api/sites`: Global list of sites for dropdowns.
+
+5.4 Parts & Inventory Controller (`/api/parts`)
+- `GET /api/parts`: Retrieve active parts inventory with SKU, stock quantity, and unit cost.
+
+5.5 Public Enquiry Controller (`/api/enquiries`)
+- `POST /api/enquiries`: Submit public landing page quote request/enquiry.
+- `GET /api/enquiries`: List enquiries for management review (Secured: Manager, Dispatcher).
+- `PATCH /api/enquiries/{id}/read`: Mark enquiry status as READ.
+
+5.6 Executive Analytics Controller (`/api/reports`)
+- `GET /api/reports/summary`: Compute executive dashboard metrics (SLA rate, status counts, technician stats).
+
+
+====================================================================================================
+6. CONCLUSION & FUTURE ROADMAP
+====================================================================================================
+
+6.1 Conclusion
+--------------
+Project KEYSTONE delivers a production-ready, highly efficient Field Service Management platform that 
+combines modern frontend aesthetics (GSAP micro-animations, glassmorphism, responsive role dashboards) 
+with a robust enterprise backend architecture (Spring Boot 3, Spring Security, JWT, PostgreSQL, Flyway).
+
+The system successfully resolves key operational challenges in field service management:
+1. Complete visibility over technician dispatch and work order SLA metrics.
+2. Real-time spare parts stock tracking and labor logging for precise job costing.
+3. Decoupled cloud architecture ready for cloud deployment on Vercel and Render.
+4. Clean, modular code structure adhering to industry best practices in security and REST API design.
+
+6.2 Recommended Future Enhancements
+-------------------------------------
+- Real-Time WebSocket Push Notifications: Integrate Spring WebSocket / STOMP for live dispatch updates.
+- Native Mobile App Build: Package the React frontend as a progressive web app (PWA) or Capacitor build 
+  for offline field technician support.
+- Route Optimization API: Integrate Google Maps / OpenStreetMap Routing API to calculate optimal daily 
+  driving routes for technicians.
+- Automated Invoicing: Integrate Stripe / PayPal billing endpoints to automatically generate client 
+  invoices upon work order closure.
+
+====================================================================================================
+                                      END OF DOCUMENTATION
+====================================================================================================

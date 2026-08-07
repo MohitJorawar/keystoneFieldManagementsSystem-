@@ -1,0 +1,395 @@
+====================================================================================================
+               COMPLETE ARCHITECTURAL & IMPLEMENTATION GUIDE: WELCOMING ANIMATION
+                        (POLOBAR & POLOSTICK SYMMETRICAL ANIMATION SYSTEM)
+====================================================================================================
+
+Overview:
+---------
+This document provides a complete, deep-dive architectural breakdown of the luxury welcoming intro animation,
+focusing specifically on the "Polobar" (horizontal animated header border with center knob) and the "Polo Stick" 
+(vertical animated scroll indicator with top knob). 
+
+You can use this document to understand, copy, and recreate the exact same animation structure in any 
+React / Next.js / Vite / Tailwind project using GSAP.
+
+====================================================================================================
+1. DEPENDENCIES & LIBRARIES REQUIRED
+====================================================================================================
+
+- GSAP (GreenSock Animation Platform) + Plugins:
+    - `gsap` (Core animation library)
+    - `gsap/ScrollTrigger` (Scroll-linked parallax & trigger animations)
+    - `gsap/CustomEase` (Custom cubic-bezier curves for smooth luxury motion)
+
+- Styling:
+    - Tailwind CSS (or standard CSS equivalent) with backdrop-blur, relative/absolute positioning, and transform utilities.
+
+- Install Command (for Node/NPM projects):
+    npm install gsap
+
+====================================================================================================
+2. CORE CONCEPT & ANATOMY OF POLOBAR AND POLOSTICK
+====================================================================================================
+
+The animation relies on exact Symmetrical Geometry and Dual-Axis Line/Knob Sync:
+
+A. POLOBAR (Horizontal Axis):
+   - Location: Bottom border of the Navbar (header component).
+   - Structure:
+     1. Knob (`.polobar-knob`): A 16x16px circular glassmorphism ring with a 6x6px inner solid white dot.
+     2. Line (`.polobar-line`): A 1px horizontal line across the entire screen width, scaling outward from center (`origin-center`).
+
+B. POLOSTICK (Vertical Axis):
+   - Location: Bottom center of the Hero component (Scroll Indicator).
+   - Structure:
+     1. Knob (`.scroll-knob`): A 16x16px circular glassmorphism ring with a 6x6px inner solid white dot.
+     2. Line (`.scroll-line`): A 1px vertical line (180px height), scaling downward from top (`origin-top`).
+
+C. SYMMETRICAL REVEAL TIMING:
+   - At t = 4.1s: BOTH Knobs (Polobar Knob & Polo Stick Knob) pop up simultaneously with a subtle bounce (`back.out(1.7)`).
+   - At t = 4.5s: BOTH Lines (Polobar Horizontal Line & Polo Stick Vertical Line) grow simultaneously outward/downward (`heroEase`).
+
+====================================================================================================
+3. DOM STRUCTURE & HTML/JSX MARKUP
+====================================================================================================
+
+--- [A] NAVBAR POLOBAR MARKUP (Place inside Navbar.jsx at the bottom of <header>) ---
+
+<div className="absolute bottom-0 left-0 right-0 h-[16px] flex justify-center items-center pointer-events-none translate-y-1/2 z-50">
+  {/* Horizontal Line expanding left and right from center */}
+  <div className="polobar-line w-full h-[1px] bg-white/70 origin-center scale-x-0" />
+  
+  {/* Outer Circle and Inner Dot (Polobar Knob) */}
+  <div className="polobar-knob w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-white/5 backdrop-blur-xs absolute scale-0 opacity-0">
+    <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+  </div>
+</div>
+
+
+--- [B] HERO POLOSTICK MARKUP (Place inside Hero.jsx at the bottom of <section>) ---
+
+<div className="scroll-indicator absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+  {/* Scroll Knob (Polo Stick Knob) */}
+  <div className="scroll-knob w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-white/5 backdrop-blur-xs scale-0 opacity-0">
+    <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+  </div>
+  {/* Scroll Line (Polo Stick Line extending vertically to bottom) */}
+  <div className="scroll-line w-[1px] h-[180px] bg-white/70 origin-top mt-0 scale-y-0" />
+</div>
+
+
+--- [C] HERO CONTENT & OVERLAY MARKUP ---
+
+<section className="relative w-full h-screen overflow-hidden flex flex-col justify-center items-center select-none bg-[#121212]">
+  {/* Phase 1 Page Flash Overlay */}
+  <div className="fixed inset-0 bg-[#F5F0EA] z-50 pointer-events-none page-flash-overlay" />
+
+  {/* Background Media Layer */}
+  <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+    {/* Dark Overlay Layer falling down */}
+    <div className="absolute inset-0 bg-black/65 z-10 hero-overlay" />
+    {/* Background Image zooming out */}
+    <img
+      src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1920&q=80"
+      alt="Hero Background"
+      className="hero-image absolute left-0 w-full h-[130%] -top-[30%] object-cover pointer-events-none z-0"
+    />
+  </div>
+
+  {/* Headlines Content */}
+  <div className="relative z-20 flex flex-col items-center justify-center text-center px-4 w-full max-w-6xl">
+    <h1 className="font-serif text-[#F5F0EA] text-[6vw] leading-[1.1] flex flex-col items-center">
+      <span className="line-1 block">A Sense</span>
+      <span className="line-2 block mt-2">
+        <span className="script-of inline-block font-serif italic text-[0.65em] text-[#a87f5a] mr-4">of</span>
+        <span className="line-2-text inline-block">Inner Change</span>
+      </span>
+    </h1>
+  </div>
+
+  {/* Polo Stick Scroll Indicator */}
+  <div className="scroll-indicator absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+    <div className="scroll-knob w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-white/5 backdrop-blur-xs">
+      <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+    </div>
+    <div className="scroll-line w-[1px] h-[180px] bg-white/70 origin-top mt-0" />
+  </div>
+</section>
+
+====================================================================================================
+4. PHASE-BY-PHASE GSAP ANIMATION TIMELINE EXPLANATION
+====================================================================================================
+
+The entire welcoming intro sequence spans 5.0 seconds from page load:
+
+----------------------------------------------------------------------------------------------------
+STEP 0: FOUC Prevention & Initial States (gsap.set)
+----------------------------------------------------------------------------------------------------
+Before playing the timeline, we lock all initial transform states:
+- Background Image (`.hero-image`): scale = 1.08, yPercent = 20 (pre-zoomed and shifted down)
+- Hero Overlay (`.hero-overlay`): yPercent = -100 (positioned off-screen top)
+- Text Elements (`.line-1`, `.script-of`, `.line-2-text`): opacity = 0, y = 30px
+- Polobar Knob (`.polobar-knob`): scale = 0, opacity = 0
+- Polobar Line (`.polobar-line`): scaleX = 0
+- Polo Stick Knob (`.scroll-knob`): scale = 0, opacity = 0
+- Polo Stick Line (`.scroll-line`): scaleY = 0
+
+Custom Eases Registered:
+- `heroEase` = CustomEase.create("heroEase", "0.16, 1, 0.3, 1")  -> Ultra-smooth cubic bezier ease-out
+- `textEase` = CustomEase.create("textEase", "0.25, 0.46, 0.45, 0.94") -> Soft text lift ease
+
+----------------------------------------------------------------------------------------------------
+PHASE 1: Page Flash Hide (t = 0.2s)
+----------------------------------------------------------------------------------------------------
+- `.page-flash-overlay` sets opacity = 0 and display = "none".
+- Purpose: Gives a soft white flash on initial render before revealing dark mood lighting.
+
+----------------------------------------------------------------------------------------------------
+PHASE 2: Background Image Zoom & Pan + Dark Overlay Drop (t = 0.2s to 2.5s)
+----------------------------------------------------------------------------------------------------
+- t = 0.2s to 2.0s (Duration 1.8s, ease: "heroEase"):
+  `.hero-image` transitions from scale 1.08 -> 1.0 and yPercent 20 -> 0.
+- t = 2.0s to 2.5s (Duration 0.5s, ease: "power2.out"):
+  `.hero-overlay` drops down from top (-100% -> 0%).
+
+----------------------------------------------------------------------------------------------------
+PHASE 3: Staggered Text Reveals (t = 2.3s to 3.5s)
+----------------------------------------------------------------------------------------------------
+- t = 2.30s: `.line-1` ("A Sense") rises up 30px -> 0px, opacity 0 -> 1 (duration 0.7s)
+- t = 2.45s: `.script-of` ("of") rises up 30px -> 0px, opacity 0 -> 1 (duration 0.7s)
+- t = 2.55s: `.line-2-text` ("Inner Change") rises up 30px -> 0px, opacity 0 -> 1 (duration 0.7s)
+- t = 2.90s: Accent lines scale to 1 (duration 0.6s)
+- t = 3.50s: Subtext paragraphs & side media slide into view (duration 0.6s)
+
+----------------------------------------------------------------------------------------------------
+PHASE 4: SYMMETRICAL KNOBS REVEAL (t = 4.1s, Duration 0.4s)
+----------------------------------------------------------------------------------------------------
+- Ease: `back.out(1.7)` (Creates a crisp spring/bounce pop effect)
+- Simultaneously animates:
+    1. `.polobar-knob` (Horizontal Header Knob): scale 0 -> 1, opacity 0 -> 1
+    2. `.scroll-knob`  (Vertical Polo Stick Knob): scale 0 -> 1, opacity 0 -> 1
+
+----------------------------------------------------------------------------------------------------
+PHASE 5: SYMMETRICAL STICKS / LINES GROW (t = 4.5s, Duration 0.5s)
+----------------------------------------------------------------------------------------------------
+- Ease: `heroEase` ("0.16, 1, 0.3, 1")
+- Simultaneously animates:
+    1. `.polobar-line` (Horizontal Line): scaleX 0 -> 1 from center (`origin-center`)
+    2. `.scroll-line`  (Vertical Line): scaleY 0 -> 1 from top (`origin-top`)
+
+----------------------------------------------------------------------------------------------------
+PHASE 6: Ambient Ken Burns Loop & Completion Callback (t = 4.8s +)
+----------------------------------------------------------------------------------------------------
+- t = 4.8s: `.hero-image` begins an infinite yoyo loop scaling between 1.0 and 1.02 (duration 8s, `sine.inOut`).
+- t = 5.0s: Callback function `onWelcomeComplete()` fires to unlock site navigation / scrolling.
+
+----------------------------------------------------------------------------------------------------
+BONUS: Scroll-Linked Scrub Parallax (ScrollTrigger)
+----------------------------------------------------------------------------------------------------
+As user scrolls down the page:
+- Hero image moves slightly downward (`yPercent: 12`)
+- Content slightly shrinks (`scale: 0.94`)
+- `.scroll-indicator` (Polo Stick) smoothly fades to opacity = 0
+
+====================================================================================================
+5. FULL REACT + GSAP COPY-PASTE CODE IMPLEMENTATION
+====================================================================================================
+
+Save the following standard React component into your new project (e.g., `WelcomingHero.jsx`):
+
+```jsx
+import React, { useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { CustomEase } from 'gsap/CustomEase'
+
+gsap.registerPlugin(ScrollTrigger, CustomEase)
+
+export default function WelcomingHero({ onWelcomeComplete }) {
+  const heroRef = useRef(null)
+  const contentRef = useRef(null)
+
+  useEffect(() => {
+    const hero = heroRef.current
+    const content = contentRef.current
+
+    // Query elements
+    const polobarKnob = document.querySelector(".polobar-knob")
+    const polobarLine = document.querySelector(".polobar-line")
+
+    // Set initial states to avoid FOUC
+    gsap.set(".hero-image", { scale: 1.08, yPercent: 20 })
+    gsap.set(".hero-overlay", { yPercent: -100 })
+    gsap.set(".line-1", { opacity: 0, y: 30 })
+    gsap.set(".script-of", { opacity: 0, y: 30 })
+    gsap.set(".line-2-text", { opacity: 0, y: 30 })
+    
+    if (polobarKnob) gsap.set(polobarKnob, { scale: 0, opacity: 0 })
+    if (polobarLine) gsap.set(polobarLine, { scaleX: 0 })
+    
+    gsap.set(".scroll-knob", { opacity: 0, scale: 0 })
+    gsap.set(".scroll-line", { scaleY: 0 })
+
+    let ctx = gsap.context(() => {
+      // Create luxury custom eases
+      CustomEase.create("heroEase", "0.16, 1, 0.3, 1")
+      CustomEase.create("textEase", "0.25, 0.46, 0.45, 0.94")
+
+      const tl = gsap.timeline()
+
+      // Phase 1: White page flash hides (0.2s)
+      tl.to(".page-flash-overlay", { opacity: 0, display: "none", duration: 0 }, 0.2)
+
+      // Phase 2: Hero Background Zoom + Pan (0.2s - 2.0s)
+      tl.to(".hero-image", { scale: 1.0, yPercent: 0, duration: 1.8, ease: "heroEase" }, 0.2)
+
+      // Black Overlay Falling Down (2.0s - 2.5s)
+      tl.to(".hero-overlay", { yPercent: 0, duration: 0.5, ease: "power2.out" }, 2.0)
+
+      // Phase 3: Text Reveals (2.3s - 3.2s)
+      tl.to(".line-1", { opacity: 1, y: 0, duration: 0.7, ease: "textEase" }, 2.3)
+      tl.to(".script-of", { opacity: 1, y: 0, duration: 0.7, ease: "textEase" }, 2.45)
+      tl.to(".line-2-text", { opacity: 1, y: 0, duration: 0.7, ease: "textEase" }, 2.55)
+
+      // Phase 4: Symmetrical Knobs (Polobar & Polo Stick) Appear (4.1s)
+      if (polobarKnob) {
+        tl.to(polobarKnob, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.7)" }, 4.1)
+      }
+      tl.to(".scroll-knob", { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.7)" }, 4.1)
+
+      // Phase 5: Symmetrical Lines (Polobar horizontal line & Polo Stick vertical line) Grow (4.5s)
+      if (polobarLine) {
+        tl.to(polobarLine, { scaleX: 1, duration: 0.5, ease: "heroEase" }, 4.5)
+      }
+      tl.to(".scroll-line", { scaleY: 1.0, duration: 0.5, ease: "heroEase" }, 4.5)
+
+      // Phase 6: Ambient subtle floating image effect (4.8s)
+      tl.add(() => {
+        gsap.to(".hero-image", { scale: 1.02, duration: 8, ease: "sine.inOut", yoyo: true, repeat: -1 })
+      }, 4.8)
+
+      // Welcome Completion Callback (5.0s)
+      tl.add(() => {
+        if (onWelcomeComplete) onWelcomeComplete()
+      }, 5.0)
+
+      // Scroll Scrubbing Parallax
+      const scrollTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: hero,
+          start: "top top",
+          end: "bottom top",
+          scrub: 1,
+        }
+      })
+      scrollTl.to(".hero-image", { yPercent: 12, ease: "none" }, 0)
+      scrollTl.to(content, { scale: 0.94, ease: "none" }, 0)
+      scrollTl.to(".scroll-indicator", { opacity: 0, ease: "none" }, 0)
+
+    }, heroRef)
+
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <section ref={heroRef} className="relative w-full h-screen overflow-hidden flex flex-col justify-center items-center select-none bg-[#121212]">
+      {/* Page Flash Overlay */}
+      <div className="fixed inset-0 bg-[#F5F0EA] z-50 pointer-events-none page-flash-overlay" />
+
+      {/* Media Layer */}
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-black/65 z-10 hero-overlay" />
+        <img
+          src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1920&q=80"
+          alt="Hero background"
+          className="hero-image absolute left-0 w-full h-[130%] -top-[30%] object-cover pointer-events-none z-0"
+        />
+      </div>
+
+      {/* Content */}
+      <div ref={contentRef} className="relative z-20 flex flex-col items-center justify-center text-center px-4 w-full max-w-6xl">
+        <h1 className="font-serif text-[#F5F0EA] text-[6vw] leading-[1.1] flex flex-col items-center">
+          <span className="line-1 block">A Sense</span>
+          <span className="line-2 block mt-2">
+            <span className="script-of inline-block font-serif italic text-[0.65em] text-[#a87f5a] mr-4">of</span>
+            <span className="line-2-text inline-block">Inner Change</span>
+          </span>
+        </h1>
+      </div>
+
+      {/* Polo Stick Scroll Indicator */}
+      <div className="scroll-indicator absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+        <div className="scroll-knob w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-white/5 backdrop-blur-xs">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+        </div>
+        <div className="scroll-line w-[1px] h-[180px] bg-white/70 origin-top mt-0" />
+      </div>
+    </section>
+  )
+}
+```
+
+====================================================================================================
+6. DUAL-KNOB SPLIT POLOBAR VARIATION (ADVANCED SCROLLTRIGGER VARIATION)
+====================================================================================================
+
+If you also want the scroll-triggered dual-knob splitting Polobar (where two knobs start at center 50% 
+and slide outward to 0% left and 100% right as the line expands):
+
+Markup:
+```jsx
+<div className="design-polobar-container absolute bottom-0 left-0 right-0 h-[16px] flex items-center pointer-events-none">
+  <div className="design-polobar-line w-full h-[1px] bg-white/70 origin-center scale-x-0" />
+  <div className="design-polobar-knob-left w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-[#16120e] absolute left-1/2 -translate-x-1/2">
+    <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+  </div>
+  <div className="design-polobar-knob-right w-4 h-4 rounded-full border border-white/40 flex items-center justify-center bg-[#16120e] absolute left-1/2 -translate-x-1/2">
+    <div className="w-1.5 h-1.5 rounded-full bg-[#F5F0EA]" />
+  </div>
+</div>
+```
+
+GSAP Timeline:
+```javascript
+// Setup initial positions at center
+gsap.set(".design-polobar-knob-left", { left: "50%", xPercent: -50, scale: 0, opacity: 0 })
+gsap.set(".design-polobar-knob-right", { left: "50%", xPercent: -50, scale: 0, opacity: 0 })
+gsap.set(".design-polobar-line", { scaleX: 0 })
+
+const tl = gsap.timeline({
+  scrollTrigger: {
+    trigger: ".design-polobar-container",
+    start: "top 90%",
+    toggleActions: "play none none none"
+  }
+})
+
+// 1. Knobs appear in center
+tl.to([".design-polobar-knob-left", ".design-polobar-knob-right"], {
+  scale: 1,
+  opacity: 1,
+  duration: 0.4,
+  ease: "back.out(1.7)"
+})
+
+// 2. Line expands & Knobs slide outward to left (0%) and right (100%)
+tl.to(".design-polobar-line", { scaleX: 1, duration: 0.8, ease: "power2.out" }, "+=0.1")
+tl.to(".design-polobar-knob-left", { left: "0%", xPercent: 0, duration: 0.8, ease: "power2.out" }, "<")
+tl.to(".design-polobar-knob-right", { left: "100%", xPercent: -100, duration: 0.8, ease: "power2.out" }, "<")
+```
+
+====================================================================================================
+7. SUMMARY & CHECKLIST FOR REPLICATING IN NEW PROJECT
+====================================================================================================
+
+[ ] 1. Install GSAP: `npm install gsap`
+[ ] 2. Copy the `Navbar` Polobar HTML markup into your Header component.
+[ ] 3. Copy the `Hero` Polo Stick HTML markup into your Hero section.
+[ ] 4. Register `ScrollTrigger` and `CustomEase` with `gsap.registerPlugin()`.
+[ ] 5. Set up initial GSAP states (`scale: 0`, `opacity: 0`, `scaleX: 0`, `scaleY: 0`) in `useEffect`.
+[ ] 6. Copy the timeline keyframes (Phase 1 to Phase 6) with exact delays (4.1s for Knobs, 4.5s for Lines).
+[ ] 7. Ensure CSS class names match (`polobar-line`, `polobar-knob`, `scroll-knob`, `scroll-line`).
+
+====================================================================================================
+                                      END OF GUIDE
+====================================================================================================

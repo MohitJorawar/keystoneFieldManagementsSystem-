@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: fieldmanagementsystem-website-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: JDBC_DATABASE_URL
+        fromDatabase:
+          name: keystone-db
+          property: connectionString
+      - key: JDBC_DATABASE_USERNAME
+        fromDatabase:
+          name: keystone-db
+          property: user
+      - key: JDBC_DATABASE_PASSWORD
+        fromDatabase:
+          name: keystone-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MS
+        value: 86400000
+
+databases:
+  - name: keystone-db
+    plan: free
+    databaseName: keystone
+    user: keystone_user

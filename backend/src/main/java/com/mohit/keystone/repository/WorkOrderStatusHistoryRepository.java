@@ -1,0 +1,12 @@
+package com.mohit.keystone.repository;
+
+import com.mohit.keystone.domain.WorkOrderStatusHistory;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface WorkOrderStatusHistoryRepository extends JpaRepository<WorkOrderStatusHistory, UUID> {
+    List<WorkOrderStatusHistory> findByWorkOrderIdOrderByChangedAtAsc(UUID workOrderId);
+}

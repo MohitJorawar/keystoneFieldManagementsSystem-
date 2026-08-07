@@ -1,0 +1,45 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: keystone
+
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/keystone}
+    username: ${JDBC_DATABASE_USERNAME:postgres}
+    password: ${JDBC_DATABASE_PASSWORD:mohit@123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    out-of-order: true
+    validate-on-migrate: false
+    locations: classpath:db/migration
+
+# Custom App Security configurations
+app:
+  jwt:
+    # 256-bit HS256 secret key (base64 encoded or simple secret)
+    # The default is: KeystoneSecretKeyMustBeAtLeast256BitsForHS256SecurityStandards2026
+    secret: ${JWT_SECRET:KeystoneSecretKeyMustBeAtLeast256BitsForHS256SecurityStandards2026}
+    # Token valid for 24 hours (86400000 ms)
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+# Springdoc OpenAPI configurations
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method

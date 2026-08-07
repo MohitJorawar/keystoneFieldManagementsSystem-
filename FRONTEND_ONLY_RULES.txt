@@ -1,0 +1,7 @@
+# FRONTEND ONLY DEVELOPMENT RULE
+
+CRITICAL DIRECTIVE:
+1. ALL edits, updates, additions, and refactoring MUST be strictly confined to the `frontend/` directory.
+2. The `backend/` directory and all files within it MUST REMAIN UNTOUCHED at all times.
+3. Do not modify, delete, or add any files in `backend/` (including `application.yml`, Java source code, pom.xml, SQL/migration scripts, etc.).
+4. All UI redesigns, styling updates, component additions, feature implementations, and client-side logic must be handled exclusively within `frontend/`.
