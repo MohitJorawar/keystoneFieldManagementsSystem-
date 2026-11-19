@@ -44,7 +44,11 @@ export const Login: React.FC = () => {
       // Success, call global login context
       login(data.id, data.token, data.name, data.email, data.role);
     } catch (err: any) {
-      setError(err.message || 'Unable to connect to server');
+      if (err.name === 'TypeError' && (err.message?.includes('fetch') || err.message?.includes('NetworkError'))) {
+        setError('Cannot reach backend server. The Render service is still deploying or waking up from sleep. Please check Render logs or try again shortly.');
+      } else {
+        setError(err.message || 'Unable to connect to server');
+      }
     } finally {
       setLoading(false);
     }
