@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://fieldmanagementsystem-website-backend-rrrp.onrender.com/api/:path*"
+      "destination": "https://keystonefieldmanagementssystem.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
