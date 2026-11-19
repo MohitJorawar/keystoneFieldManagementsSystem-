@@ -10,9 +10,8 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
+  const doLogin = async (loginEmail: string, loginPass: string) => {
+    if (!loginEmail || !loginPass) {
       setError('Please fill in all fields');
       return;
     }
@@ -26,13 +25,20 @@ export const Login: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPass }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+        if (response.status === 503) {
+          throw new Error('Backend service is currently suspended or starting up on Render. Please resume the service or try again in a moment.');
+        } else if (response.status === 502 || response.status === 504) {
+          throw new Error('Backend server is waking up from sleep. Please wait 30 seconds and try again.');
+        } else if (response.status === 404) {
+          throw new Error('Backend API endpoint not found (404). Please verify the backend service URL.');
+        }
+        throw new Error(data?.message || `Authentication failed (Status ${response.status})`);
       }
 
       // Success, call global login context
@@ -44,17 +50,15 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await doLogin(email, password);
+  };
+
   const handleSeedLogin = (seedEmail: string) => {
     setEmail(seedEmail);
     setPassword('password');
-    // We let the user click "Sign In" or we can trigger it.
-    // Triggering next tick:
-    setTimeout(() => {
-      const form = document.querySelector('form');
-      if (form) {
-        form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-      }
-    }, 100);
+    doLogin(seedEmail, 'password');
   };
 
   return (

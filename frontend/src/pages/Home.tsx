@@ -292,10 +292,15 @@ export const Home: React.FC = () => {
         body: JSON.stringify({ name, email, phone, password }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed')
+        if (response.status === 503) {
+          throw new Error('Backend service is currently suspended or starting up on Render. Please try again shortly.')
+        } else if (response.status === 502 || response.status === 504) {
+          throw new Error('Backend server is waking up. Please wait 30 seconds and try again.')
+        }
+        throw new Error(data?.message || `Registration failed (Status ${response.status})`)
       }
 
       alert('KeyStone account created successfully! Please sign in.')
@@ -337,6 +342,9 @@ export const Home: React.FC = () => {
       })
 
       if (!response.ok) {
+        if (response.status === 503) {
+          throw new Error('Backend service is currently suspended or starting up on Render. Please try again shortly.')
+        }
         throw new Error('Failed to submit quote enquiry')
       }
 

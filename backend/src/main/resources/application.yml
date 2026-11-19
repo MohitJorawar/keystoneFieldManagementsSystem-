@@ -6,14 +6,14 @@ spring:
     name: keystone
 
   datasource:
-    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/keystone}
-    username: ${JDBC_DATABASE_USERNAME:postgres}
-    password: ${JDBC_DATABASE_PASSWORD:mohit@123}
+    url: ${JDBC_DATABASE_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/keystone}}
+    username: ${JDBC_DATABASE_USERNAME:${DATABASE_USERNAME:postgres}}
+    password: ${JDBC_DATABASE_PASSWORD:${DATABASE_PASSWORD:mohit@123}}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:

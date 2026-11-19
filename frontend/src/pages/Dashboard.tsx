@@ -208,6 +208,11 @@ export const Dashboard: React.FC = () => {
     const data = await response.json().catch(() => null);
     
     if (!response.ok) {
+      if (response.status === 503) {
+        throw new Error('Backend service is currently suspended or starting up on Render. Please resume the service or try again in a few moments.');
+      } else if (response.status === 502 || response.status === 504) {
+        throw new Error('Backend server is waking up. Please wait 30 seconds and refresh.');
+      }
       throw new Error(data?.message || `Request failed with status ${response.status}`);
     }
     return data;
